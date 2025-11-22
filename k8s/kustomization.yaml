@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ibsng
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgres-pvc.yaml
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+  - ibsng-pvc.yaml
+  - ibsng-deployment.yaml
+  - ibsng-service.yaml
+  # - ingress.yaml  # Uncomment if using ingress
+
+commonLabels:
+  app: ibsng
+  managed-by: kustomize
+

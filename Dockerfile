@@ -16,11 +16,23 @@ LABEL org.opencontainers.image.documentation="https://github.com/mohseni676/ibsn
 
 # Fix CentOS 7 repositories (EOL - use vault)
 # Use archive.org mirror as vault.centos.org has access issues
-RUN for repo in /etc/yum.repos.d/CentOS-*.repo; do \
+# Handle both x86_64 and aarch64 architectures
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        REPO_ARCH="x86_64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        REPO_ARCH="aarch64"; \
+        # For ARM64, try to use x86_64 emulation or skip if not available
+        echo "Warning: CentOS 7 ARM64 support is limited, using x86_64 repositories"; \
+        REPO_ARCH="x86_64"; \
+    else \
+        REPO_ARCH="x86_64"; \
+    fi && \
+    for repo in /etc/yum.repos.d/CentOS-*.repo; do \
         sed -i 's/mirrorlist/#mirrorlist/g' "$repo"; \
-        sed -i 's|#baseurl=http://mirror.centos.org/centos/\$releasever/os/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/os/x86_64/|g' "$repo"; \
-        sed -i 's|#baseurl=http://mirror.centos.org/centos/\$releasever/updates/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/updates/x86_64/|g' "$repo"; \
-        sed -i 's|#baseurl=http://mirror.centos.org/centos/\$releasever/extras/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/extras/x86_64/|g' "$repo"; \
+        sed -i "s|#baseurl=http://mirror.centos.org/centos/\$releasever/os/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/os/${REPO_ARCH}/|g" "$repo"; \
+        sed -i "s|#baseurl=http://mirror.centos.org/centos/\$releasever/updates/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/updates/${REPO_ARCH}/|g" "$repo"; \
+        sed -i "s|#baseurl=http://mirror.centos.org/centos/\$releasever/extras/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/extras/${REPO_ARCH}/|g" "$repo"; \
     done
 
 # Install required packages

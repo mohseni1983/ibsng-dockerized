@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ibsng-ingress
+  namespace: ibsng
+  labels:
+    app: ibsng
+  annotations:
+    # Uncomment and configure based on your ingress controller
+    # For nginx-ingress:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # For cert-manager (SSL):
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx  # Change to your ingress class
+  rules:
+  - host: ibsng.example.com  # Change to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ibsng-app
+            port:
+              number: 80
+  # Uncomment for SSL/TLS
+  # tls:
+  # - hosts:
+  #   - ibsng.example.com
+  #   secretName: ibsng-tls
+
+---
+# Example: Ingress for Traefik
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: ibsng-ingress
+#   namespace: ibsng
+#   annotations:
+#     traefik.ingress.kubernetes.io/rule-type: PathPrefix
+# spec:
+#   ingressClassName: traefik
+#   rules:
+#   - host: ibsng.example.com
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: ibsng-app
+#             port:
+#               number: 80
+

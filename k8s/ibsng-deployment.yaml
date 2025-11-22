@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ibsng-app
+  namespace: ibsng
+  labels:
+    app: ibsng
+    component: application
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ibsng
+      component: application
+  template:
+    metadata:
+      labels:
+        app: ibsng
+        component: application
+    spec:
+      # For ARM64 clusters, Docker Desktop will use emulation
+      # If you have issues, you can add a nodeSelector to force AMD64:
+      # nodeSelector:
+      #   kubernetes.io/arch: amd64
+      # Wait for database to be ready
+      initContainers:
+      - name: wait-for-db
+        image: postgres:11
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h ibsng-db -p 5432 -U ibs; do
+            echo "Waiting for database..."
+            sleep 2
+          done
+          echo "Database is ready!"
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ibsng-secrets
+              key: postgres-password
+      containers:
+      - name: ibsng
+        # For ARM64 clusters, use the AMD64 tag which will run via emulation
+        # Change to 'latest' if you have a multi-arch build
+        image: mohseni676/ibsng-dockerized:latest-amd64
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 1235
+          name: xmlrpc
+          protocol: TCP
+        - containerPort: 1812
+          name: radius-auth
+          protocol: UDP
+        - containerPort: 1813
+          name: radius-acct
+          protocol: UDP
+        env:
+        - name: IBSNG_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ibsng-config
+              key: IBSNG_DB_HOST
+        - name: IBSNG_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ibsng-config
+              key: IBSNG_DB_PORT
+        - name: IBSNG_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ibsng-config
+              key: IBSNG_DB_NAME
+        - name: IBSNG_DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: ibsng-config
+              key: IBSNG_DB_USER
+        - name: IBSNG_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ibsng-secrets
+              key: ibsng-db-password
+        volumeMounts:
+        - name: ibsng-logs
+          mountPath: /var/log/IBSng
+        - name: ibsng-data
+          mountPath: /usr/local/IBSng/data
+        - name: ibsng-templates
+          mountPath: /usr/local/IBSng/interface/smarty/templates_c
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /IBSng/admin/
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /IBSng/admin/
+            port: 80
+          initialDelaySeconds: 40
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        # Required for bandwidth management features (if needed)
+        # securityContext:
+        #   capabilities:
+        #     add:
+        #       - NET_ADMIN
+        #       - SYS_MODULE
+      volumes:
+      - name: ibsng-logs
+        persistentVolumeClaim:
+          claimName: ibsng-logs-pvc
+      - name: ibsng-data
+        persistentVolumeClaim:
+          claimName: ibsng-data-pvc
+      - name: ibsng-templates
+        persistentVolumeClaim:
+          claimName: ibsng-templates-pvc
+

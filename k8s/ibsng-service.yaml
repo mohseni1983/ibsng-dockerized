@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ibsng-app
+  namespace: ibsng
+  labels:
+    app: ibsng
+    component: application
+spec:
+  type: LoadBalancer  # Use NodePort or ClusterIP for internal access
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 1235
+    targetPort: 1235
+    protocol: TCP
+    name: xmlrpc
+  - port: 1812
+    targetPort: 1812
+    protocol: UDP
+    name: radius-auth
+  - port: 1813
+    targetPort: 1813
+    protocol: UDP
+    name: radius-acct
+  selector:
+    app: ibsng
+    component: application
+  sessionAffinity: ClientIP
+
+---
+# Alternative: Use NodePort for direct access
+# Uncomment and use this if LoadBalancer is not available
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: ibsng-app
+#   namespace: ibsng
+#   labels:
+#     app: ibsng
+#     component: application
+# spec:
+#   type: NodePort
+#   ports:
+#   - port: 80
+#     targetPort: 80
+#     nodePort: 30080
+#     protocol: TCP
+#     name: http
+#   - port: 1235
+#     targetPort: 1235
+#     nodePort: 31235
+#     protocol: TCP
+#     name: xmlrpc
+#   - port: 1812
+#     targetPort: 1812
+#     nodePort: 31812
+#     protocol: UDP
+#     name: radius-auth
+#   - port: 1813
+#     targetPort: 1813
+#     nodePort: 31813
+#     protocol: UDP
+#     name: radius-acct
+#   selector:
+#     app: ibsng
+#     component: application
+

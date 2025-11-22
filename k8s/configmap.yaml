@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ibsng-config
+  namespace: ibsng
+  labels:
+    app: ibsng
+data:
+  # Database configuration
+  IBSNG_DB_HOST: "ibsng-db"
+  IBSNG_DB_PORT: "5432"
+  IBSNG_DB_NAME: "IBSng"
+  IBSNG_DB_USER: "ibs"
+  # Note: Password should be set via Secret, not ConfigMap
+
