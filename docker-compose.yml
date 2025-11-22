@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database Service
   db:
-    image: postgres:12
+    image: postgres:11
     container_name: ibsng-db
     restart: unless-stopped
     environment:
@@ -14,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - ibsng-network
     healthcheck:
@@ -32,6 +30,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    platform: linux/amd64
     container_name: ibsng-app
     restart: unless-stopped
     depends_on:

@@ -4,9 +4,24 @@
 FROM centos:7
 
 # Metadata
-LABEL maintainer="IBSng Team"
-LABEL description="IBSng - ISP Billing System"
+LABEL maintainer="mohseni676"
+LABEL description="IBSng - ISP Billing System (Dockerized). Complete ISP billing and RADIUS server solution with web interface, XML-RPC API, and RADIUS authentication/accounting support."
 LABEL version="A1.23"
+LABEL org.opencontainers.image.title="IBSng Dockerized"
+LABEL org.opencontainers.image.description="IBSng ISP Billing System containerized for easy deployment. Includes PostgreSQL database support, Apache web server, and full RADIUS server capabilities."
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.vendor="mohseni676"
+LABEL org.opencontainers.image.url="https://github.com/mohseni676/ibsng-dockerized"
+LABEL org.opencontainers.image.documentation="https://github.com/mohseni676/ibsng-dockerized/blob/main/README.md"
+
+# Fix CentOS 7 repositories (EOL - use vault)
+# Use archive.org mirror as vault.centos.org has access issues
+RUN for repo in /etc/yum.repos.d/CentOS-*.repo; do \
+        sed -i 's/mirrorlist/#mirrorlist/g' "$repo"; \
+        sed -i 's|#baseurl=http://mirror.centos.org/centos/\$releasever/os/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/os/x86_64/|g' "$repo"; \
+        sed -i 's|#baseurl=http://mirror.centos.org/centos/\$releasever/updates/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/updates/x86_64/|g' "$repo"; \
+        sed -i 's|#baseurl=http://mirror.centos.org/centos/\$releasever/extras/\$basearch/|baseurl=http://archive.kernel.org/centos-vault/7.9.2009/extras/x86_64/|g' "$repo"; \
+    done
 
 # Install required packages
 RUN yum update -y && \
@@ -23,6 +38,7 @@ RUN yum update -y && \
     net-tools \
     procps \
     which \
+    curl \
     && yum clean all
 
 # Set working directory
@@ -54,7 +70,13 @@ RUN cp /usr/local/IBSng/backup_ibs /usr/bin/backup_ibs && \
 
 # Configure Apache
 RUN cp /usr/local/IBSng/addons/apache/ibs.conf /etc/httpd/conf.d/ && \
-    echo "ServerName localhost" >> /etc/httpd/conf/httpd.conf
+    echo "ServerName localhost" >> /etc/httpd/conf/httpd.conf && \
+    echo "" >> /etc/httpd/conf/httpd.conf && \
+    echo "<Directory \"/usr/local/IBSng/interface/IBSng\">" >> /etc/httpd/conf/httpd.conf && \
+    echo "    Options None" >> /etc/httpd/conf/httpd.conf && \
+    echo "    AllowOverride None" >> /etc/httpd/conf/httpd.conf && \
+    echo "    Require all granted" >> /etc/httpd/conf/httpd.conf && \
+    echo "</Directory>" >> /etc/httpd/conf/httpd.conf
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
