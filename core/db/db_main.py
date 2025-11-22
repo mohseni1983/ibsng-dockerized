@@ -48,6 +48,15 @@ def init():
     dbpool.initPool()
     from core.event import daily_events
     daily_events.addLowLoadJob(vacuumDB,[])
+    # Run database migrations automatically
+    try:
+        from core.db import db_migration
+        db_migration.init()
+    except Exception, e:
+        from core.lib.general import toLog, LOG_ERROR, logException
+        toLog("Failed to initialize database migrations: %s" % str(e), LOG_ERROR)
+        logException(LOG_ERROR)
+        # Don't fail system startup if migrations fail
 
 def shutdown():
     dbpool.getPool().close()

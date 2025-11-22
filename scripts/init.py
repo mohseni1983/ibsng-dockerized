@@ -15,6 +15,15 @@ pg_hba_conf = "/var/lib/pgsql/data/pg_hba.conf"
 httpd_conf = "/etc/httpd/conf/httpd.conf"
 selinux_config_file = "/etc/selinux/config"
 
+# Check if using external database
+def isExternalDatabase():
+    """Check if external database is configured via environment variables"""
+    db_host = os.environ.get('IBSNG_DB_HOST', None)
+    # If DB_HOST is set and not localhost/None, it's external
+    if db_host and db_host not in ['localhost', '127.0.0.1', '', None]:
+        return True
+    return False
+
 
 def getDBConnection():
     from core import db_conf
@@ -22,8 +31,11 @@ def getDBConnection():
     reload(db_conf)
     import pg
 
+    # Use DB_NAME if available, otherwise default to "IBSng"
+    db_name = getattr(db_conf, 'DB_NAME', 'IBSng')
+    
     con = pg.connect(
-        "IBSng",
+        db_name,
         db_conf.DB_HOST,
         db_conf.DB_PORT,
         None,
@@ -95,13 +107,21 @@ except ImportError:
               2-Download and install it from http://www.pygresql.org/"
     )
 
-# trust ibsng pg pg_hba.conf
-pg_hba_content = "local  IBSng   ibs            trust"
-if not isContentInFile(pg_hba_conf, pg_hba_content):
-    addToFile(pg_hba_conf, pg_hba_content)
-    ret = os.system("systemctl restart postgresql")
-    if ret != 0:
-        sys.exit("ERROR: Failed to run 'systemctl restart postgresql'")
+# Configure pg_hba.conf only for local database
+# Skip this step if using external database
+if not isExternalDatabase():
+    # Check if pg_hba.conf exists (local PostgreSQL installation)
+    if os.path.exists(pg_hba_conf):
+        pg_hba_content = "local  IBSng   ibs            trust"
+        if not isContentInFile(pg_hba_conf, pg_hba_content):
+            addToFile(pg_hba_conf, pg_hba_content)
+            ret = os.system("systemctl restart postgresql")
+            if ret != 0:
+                sys.exit("ERROR: Failed to run 'systemctl restart postgresql'")
+    else:
+        print("WARNING: pg_hba.conf not found. Assuming external database or PostgreSQL not installed locally.")
+else:
+    print("INFO: External database detected. Skipping local pg_hba.conf configuration.")
 
 # checking db connection
 try:

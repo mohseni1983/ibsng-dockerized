@@ -1,0 +1,56 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/var/log/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Training materials
+training.pdf
+
+# Build artifacts
+*.pyc
+*.pyo
+*.pyd
+
+# Docker files (don't copy into image)
+docker-compose*.yml
+Dockerfile
+.dockerignore
+DOCKER.md
+

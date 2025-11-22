@@ -15,19 +15,67 @@ if [ ! -f "$BACKUP_FILE" ]; then
   exit 1
 fi
 
+# Database connection parameters (supports external databases via environment variables)
+DB_HOST=${IBSNG_DB_HOST:-localhost}
+DB_PORT=${IBSNG_DB_PORT:-5432}
+DB_USER=${IBSNG_DB_USER:-ibs}
+DB_NAME=${IBSNG_DB_NAME:-IBSng}
+export PGPASSWORD=${IBSNG_DB_PASSWORD:-ibsdbpass}
+
 # Stop the IBSng service
-service IBSng stop
+if systemctl is-active --quiet IBSng 2>/dev/null || service IBSng status >/dev/null 2>&1; then
+    echo "Stopping IBSng service..."
+    service IBSng stop 2>/dev/null || systemctl stop IBSng 2>/dev/null || true
+fi
 
-# Drop the existing IBSng database
-su postgres -c "dropdb IBSng"
-
-# Create a new IBSng database
-su postgres -c "createdb IBSng"
-
-# Restore the database from the backup file
-su postgres -c "psql IBSng < $BACKUP_FILE"
+# Drop and recreate the database
+if [ "$DB_HOST" == "localhost" ] || [ "$DB_HOST" == "127.0.0.1" ] || [ -z "$DB_HOST" ]; then
+    # Local database operations
+    if id "postgres" &>/dev/null; then
+        echo "Dropping existing database..."
+        su postgres -c "dropdb $DB_NAME" 2>/dev/null || true
+        
+        echo "Creating new database..."
+        su postgres -c "createdb $DB_NAME"
+        
+        echo "Restoring database from backup..."
+        su postgres -c "psql $DB_NAME < $BACKUP_FILE"
+    else
+        # Fallback to direct connection
+        echo "Dropping existing database..."
+        dropdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" 2>/dev/null || true
+        
+        echo "Creating new database..."
+        createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME"
+        
+        echo "Restoring database from backup..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" < "$BACKUP_FILE"
+    fi
+else
+    # External database operations
+    echo "Connecting to external database at $DB_HOST:$DB_PORT..."
+    echo "Dropping existing database..."
+    dropdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" 2>/dev/null || true
+    
+    echo "Creating new database..."
+    createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to create database on external server"
+        exit 1
+    fi
+    
+    echo "Restoring database from backup..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" < "$BACKUP_FILE"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to restore database on external server"
+        exit 1
+    fi
+fi
 
 # Start the IBSng service
-service IBSng start
+echo "Starting IBSng service..."
+service IBSng start 2>/dev/null || systemctl start IBSng 2>/dev/null || true
 
 echo "Database restoration completed successfully."

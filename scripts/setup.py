@@ -132,7 +132,9 @@ def getDBConnection():
     from core import db_conf
     reload(db_conf)
     import pg
-    con=pg.connect("IBSng",db_conf.DB_HOST,db_conf.DB_PORT,None,None,db_conf.DB_USERNAME,db_conf.DB_PASSWORD)
+    # Use DB_NAME if available, otherwise default to "IBSng"
+    db_name = getattr(db_conf, 'DB_NAME', 'IBSng')
+    con=pg.connect(db_name,db_conf.DB_HOST,db_conf.DB_PORT,None,None,db_conf.DB_USERNAME,db_conf.DB_PASSWORD)
     return con
 #######################################
 def installEditDefs(stdscr,menu,log):

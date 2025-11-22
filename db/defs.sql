@@ -10,7 +10,7 @@ insert into defs (name,value) VALUES ('CHECK_ONLINE_MAX_FAILS','I2
 .') ;
 insert into defs (name,value) VALUES ('IAS_ENABLED','I0
 .') ;
-insert into defs (name,value) VALUES ('IBS_SERVER_IP','S\'127.0.0.1\'
+insert into defs (name,value) VALUES ('IBS_SERVER_IP','S\'0.0.0.0\'
 p0
 .') ;
 insert into defs (name,value) VALUES ('IBS_SERVER_PORT','I1235

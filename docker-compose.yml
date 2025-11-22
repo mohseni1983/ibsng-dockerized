@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:12
+    container_name: ibsng-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: IBSng
+      POSTGRES_USER: ibs
+      POSTGRES_PASSWORD: ibsdbpass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ibsng-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ibs -d IBSng"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      postgres
+      -c listen_addresses='*'
+      -c max_connections=200
+
+  # IBSng Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ibsng-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database connection (external PostgreSQL)
+      IBSNG_DB_HOST: db
+      IBSNG_DB_PORT: 5432
+      IBSNG_DB_USER: ibs
+      IBSNG_DB_PASSWORD: ibsdbpass
+      IBSNG_DB_NAME: IBSng
+      # Optional: SSL configuration
+      # IBSNG_DB_SSL_MODE: prefer
+    volumes:
+      - ibsng_logs:/var/log/IBSng
+      - ibsng_data:/usr/local/IBSng/data
+      - ibsng_templates:/usr/local/IBSng/interface/smarty/templates_c
+    ports:
+      - "80:80"          # Web interface
+      - "1235:1235"       # XML-RPC server
+      - "1812:1812/udp"   # RADIUS authentication
+      - "1813:1813/udp"   # RADIUS accounting
+    networks:
+      - ibsng-network
+    cap_add:
+      - NET_ADMIN        # Required for bandwidth management (tc, iptables)
+      - SYS_MODULE       # Required for kernel modules (sch_tbf, sch_htb)
+    privileged: false    # Set to true only if you need full system access
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "ibs.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+    name: ibsng_postgres_data
+  ibsng_logs:
+    driver: local
+    name: ibsng_logs
+  ibsng_data:
+    driver: local
+    name: ibsng_data
+  ibsng_templates:
+    driver: local
+    name: ibsng_templates
+
+networks:
+  ibsng-network:
+    driver: bridge
+    name: ibsng-network
+

@@ -11,12 +11,45 @@ except ImportError:
 class db_pg (ibs_db):
     
     def connect(self,dbname,host,port,user,password):
+        """
+        Connect to PostgreSQL database.
+        Supports both local (Unix socket) and external (TCP/IP) connections.
+        
+        Args:
+            dbname: Database name
+            host: None for Unix socket, or hostname/IP for TCP/IP connection
+            port: Port number (ignored for Unix socket connections)
+            user: Database username
+            password: Database password
+        """
         try:
-            self.connHandle=pg.connect(dbname,host,port,None,None,user,password)
-        except Exception,e:
-            raise ibs_exceptions.DBException(str(e))
+            # For external connections (host is not None), ensure we use TCP/IP
+            # For local connections (host is None), use Unix socket
+            if host is None or host == "":
+                # Local connection via Unix socket
+                self.connHandle=pg.connect(dbname,None,None,None,None,user,password)
+            else:
+                # External connection via TCP/IP
+                # Convert port to integer if it's a string
+                try:
+                    port = int(port)
+                except (ValueError, TypeError):
+                    port = 5432  # Default PostgreSQL port
+                self.connHandle=pg.connect(dbname,host,port,None,None,user,password)
         except PGError,e:
-            raise ibs_exceptions.DBException(str(e))
+            # Provide more informative error messages for external connections
+            if host is not None and host != "":
+                error_msg = "Failed to connect to external PostgreSQL database at %s:%s - %s" % (host, port, str(e))
+            else:
+                error_msg = "Failed to connect to local PostgreSQL database - %s" % str(e)
+            raise ibs_exceptions.DBException(error_msg)
+        except Exception,e:
+            # Handle other exceptions (network errors, etc.)
+            if host is not None and host != "":
+                error_msg = "Network error connecting to external PostgreSQL at %s:%s - %s" % (host, port, str(e))
+            else:
+                error_msg = "Error connecting to PostgreSQL - %s" % str(e)
+            raise ibs_exceptions.DBException(error_msg)
 
     def prepareQuery(self,plan_name, args , query):
         self._runQuery("prepare %s (%s) as %s"%(plan_name,",".join(args),query))

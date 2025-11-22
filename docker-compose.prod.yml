@@ -1,0 +1,59 @@
+# Production docker-compose override
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+version: '3.8'
+
+services:
+  db:
+    # Use external PostgreSQL database
+    # Uncomment and configure if using external database
+    # image: postgres:12
+    # environment:
+    #   POSTGRES_DB: ${POSTGRES_DB:-IBSng}
+    #   POSTGRES_USER: ${POSTGRES_USER:-ibs}
+    #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # volumes:
+    #   - postgres_data:/var/lib/postgresql/data
+    # ports:
+    #   - "${POSTGRES_PORT:-5432}:5432"
+    
+    # Or remove db service entirely and set IBSNG_DB_HOST in app service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  app:
+    environment:
+      # Override with production database credentials
+      IBSNG_DB_HOST: ${IBSNG_DB_HOST:-db}
+      IBSNG_DB_PORT: ${IBSNG_DB_PORT:-5432}
+      IBSNG_DB_USER: ${IBSNG_DB_USER:-ibs}
+      IBSNG_DB_PASSWORD: ${IBSNG_DB_PASSWORD}
+      IBSNG_DB_NAME: ${IBSNG_DB_NAME:-IBSng}
+      # Enable SSL for production
+      # IBSNG_DB_SSL_MODE: require
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+    # Uncomment for bandwidth management features
+    # cap_add:
+    #   - NET_ADMIN
+    #   - SYS_MODULE
+    # privileged: true
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

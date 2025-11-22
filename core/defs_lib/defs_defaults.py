@@ -7,7 +7,7 @@
 
 #######  SERVER IP/PORT
 IBS_SERVER_PORT=1235
-IBS_SERVER_IP="127.0.0.1" #server bind ip address
+IBS_SERVER_IP="0.0.0.0" #server bind ip address (0.0.0.0 = listen on all interfaces, enables XML-RPC by default)
 
 TRUSTED_CLIENTS=["127.0.0.1"] #clients we trust(ex. webserver). We trust auth_remoteaddr from these clients
 
